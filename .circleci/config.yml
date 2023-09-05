@@ -1,0 +1,16 @@
+version: 2.1
+jobs: 
+  build:
+    docker:
+      - image: circleci/python:3.7
+    steps:
+
+  aws-configure: 
+    docker:
+    - image : circleci/python:3.7   
+    steps: 
+      - run: 
+          name: Install AWS CLI
+          command: |
+              aws s3 sync s3: //bucketdeployment/deom.txt /home/ubuntu
+              aws ssm send-command --document-name "AWS-RunRemoteScript" --instance-ids "${{ inputs.INSTANCE_ID }}" --parameters '{"sourceType":["S3"],"sourceInfo":["{\"path\":\"https://${{ inputs.BUCKET_NAME }}.s3.${{ inputs.BUCKET_REGION }}.amazonaws.com\"}"],"commandLine":["sudo bash ${{ inputs.FILE }}"],"workingDirectory":["${{ inputs.WORKDIR }}"]}'
