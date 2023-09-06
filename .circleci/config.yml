@@ -4,6 +4,7 @@ jobs:
     docker:
       - image: circleci/python:3.7
     steps:
+        - checkout 
 
   aws-configure: 
     docker:
@@ -12,5 +13,32 @@ jobs:
       - run: 
           name: Install AWS CLI
           command: |
-              aws s3 sync s3: //bucketdeployment/deom.txt /home/ubuntu
-              aws ssm send-command --document-name "AWS-RunRemoteScript" --instance-ids "${{ inputs.INSTANCE_ID }}" --parameters '{"sourceType":["S3"],"sourceInfo":["{\"path\":\"https://${{ inputs.BUCKET_NAME }}.s3.${{ inputs.BUCKET_REGION }}.amazonaws.com\"}"],"commandLine":["sudo bash ${{ inputs.FILE }}"],"workingDirectory":["${{ inputs.WORKDIR }}"]}'
+              aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+              aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+              aws configure set default.region $AWS_REGION
+  deploy:
+    docker:
+     - image: circleci/python:3.7
+    steps:
+      - attach_workspace:
+          at: /workspace
+      - run:
+          name: SSH into EC2
+          commnad: |
+            ssh -i /path/to/your/ssh-key.pem ec2-user@your-ec2-instance-ip
+      - run:
+          name: Transfer and Deploy
+          command: |
+            scp -i /path/to/your/ssh-key.pem /workspace/path/to/your/file.txt ec2-user@your-ec2-instance-ip:/path/on/ec2
+
+workflows:
+  version: 2
+  build-deploy:
+    jobs:
+      - build
+      - aws-configure:
+          requires:
+            - build
+      - deploy:
+          requires:
+            - aws-configure
