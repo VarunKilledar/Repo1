@@ -2,13 +2,17 @@ version: 2.1
 jobs: 
   build:
     docker:
-      - image: circleci/python:3.7
+      - image: circleci/node:12
     steps:
         - checkout 
+      - run: 
+          name: Installing Node Dependences 
+          command: |
+              npm install
 
-  aws-configure: 
+  aws-configure ande building docekr: 
     docker:
-    - image : circleci/python:3.7   
+    - image : circleci/node:12  
     steps: 
       - run: 
           name: Install AWS CLI
