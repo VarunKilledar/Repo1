@@ -9,8 +9,17 @@ jobs:
           name: Installing Node Dependences 
           command: |
               npm install
+  test:
+  working-director: ~/my
+  docker: 
+    - image: cirlcleci/node:12
+    steps: 
+      - checkout
+      - run: 
+        command: |
+            npm start
 
-  aws-configure ande building docekr: 
+  aws-configure and building docekr: 
     docker:
     - image : circleci/node:12  
     steps: 
@@ -20,29 +29,41 @@ jobs:
               aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
               aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
               aws configure set default.region $AWS_REGION
+  
+  sending_code_s3:
+    from: .
+    to: s3://bucketdeployment/
+    overwirte: true 
+
   deploy:
-    docker:
-     - image: circleci/python:3.7
-    steps:
-      - attach_workspace:
-          at: /workspace
-      - run:
-          name: SSH into EC2
-          commnad: |
-            ssh -i /path/to/your/ssh-key.pem ec2-user@your-ec2-instance-ip
-      - run:
-          name: Transfer and Deploy
-          command: |
-            scp -i /path/to/your/ssh-key.pem /workspace/path/to/your/file.txt ec2-user@your-ec2-instance-ip:/path/on/ec2
+    - steps:
+         - ssh-deploy:
+            key: << parameters.ssh_key >>
+            user: << parameters.ssh_user >>
+            host: << parameters.ec2_instance_ip >>
+            script: |
+              # SSH into the EC2 instance and deploy the code
+              ssh -i $HOME/.ssh/$SSH_KEY $SSH_USER@$EC2_INSTANCE_IP "aws s3 sync s3://bucketdeployment/ /home/ubantu"
+            environment:
+              SSH_USER: $SSH_USER
+              SSH_KEY: $SSH_KEY
+              EC2_INSTANCE_IP: $EC2_INSTANCE_IP 
 
 workflows:
   version: 2
   build-deploy:
     jobs:
       - build
-      - aws-configure:
+      - test:
+          requires:
+            -build
+      - sending_code_s3:
           requires:
             - build
+            - test
       - deploy:
-          requires:
-            - aws-configure
+          reqiures:
+             - sending_code_s3 
+             
+
+      
