@@ -31,9 +31,11 @@ jobs:
               aws configure set default.region $AWS_REGION
   
   sending_code_s3:
-    from: .
-    to: s3://bucketdeployment/
-    overwirte: true 
+    - run:
+        - name: Sending data to aws S3 bucket 
+        - command: 
+            - aws s3 sync ./ my s3://bucketdeployment/
+
 
   deploy:
     - steps:
